@@ -1,14 +1,15 @@
 /**
- * insidegubbio ai api based on workers
+ *  insidegubbio ai api based on workers
  */
 
-const ALLOWED_ORIGIN_PATTERN = /^https?:\/\/([\w-]+\.)?insidegubbio\.com$/
+const ALLOWED_ORIGIN_PATTERN = /^https?:\/\/(([\w-]+\.)?insidegubbio\.com|([\w-]+\.)?insidegubbio\.framer\.ai)$/ // even dev url
 
 const MONUMENTS_ENDPOINT =
   "https://api.insidegubbio.com/v1/articles/elenco-monumenti"
 
 const DEFAULT_MODEL = "gemini-2.5-flash" // if no var is set
 
+// cors
 function corsHeaders(origin) {
   const allowed = ALLOWED_ORIGIN_PATTERN.test(origin || "")
     ? origin
@@ -34,7 +35,7 @@ function jsonResponse(data, status = 200, origin = "") {
 // fetch monuments
 async function fetchMonuments() {
   const res = await fetch(MONUMENTS_ENDPOINT, {
-    cf: { cacheTtl: 300, cacheEverything: true }, // cloudflare edge cache 5 min
+    cf: { cacheTtl: 300, cacheEverything: true }, // clloudflare edge cache 5 min
   })
   if (!res.ok) return []
 
@@ -111,7 +112,7 @@ async function callGemini(apiKey, model, userPrompt, monuments, systemPromptTemp
     .trim()
 
   if (!text)
-    throw new Error("Risposta vuota da Gemini, riprova.")
+    throw new Error("Risposta vuota da Gemini")
 
   return text
 }
@@ -127,7 +128,7 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders(origin) })
     }
 
-    // post
+    // itinerary route
     if (request.method === "POST" && url.pathname === "/api/v1/itinerary") {
 
       // check origin
