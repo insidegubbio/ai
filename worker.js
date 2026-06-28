@@ -169,7 +169,10 @@ async function streamGemini(apiKey, model, userPrompt, monuments, systemPromptTe
         for (const line of lines) {
           if (!line.startsWith("data:")) continue
           const json = line.slice(5).trim()
-          if (!json || json === "[DONE]") continue
+          if (!json || json === "[DONE]") {
+            if (readerDone) break
+              continue
+          }
           try {
             const parsed = JSON.parse(json)
             const parts = parsed?.candidates?.[0]?.content?.parts || []
