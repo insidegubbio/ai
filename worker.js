@@ -107,17 +107,14 @@ async function fetchMonuments(env) {
 
 function buildMonumentsContext(monuments) {
   return monuments
-    .map((m, i) => {
-      const parts = [
-        `${i + 1}. ${m.nome}`,
-        `coord: ${m.coordinate.lat.toFixed(5)},${m.coordinate.lng.toFixed(5)}`,
-        `rilevanza: ${m.valutazione}`,
-        `visitabilità: ${m.visitabilita}`,
-      ]
-      if (m.percorso && m.percorso !== "idem" && m.percorso !== "vedi sopra")
-        parts.push(`percorso: ${m.percorso}`)
-      return parts.join(" | ")
+    .filter(m => {
+      if (!m.coordinate?.lat) return false
+      if (/non più esistente|non agibile|ruderi/.test(m.visitabilita)) return false
+      return true
     })
+    .map((m, i) =>
+      `${i + 1}. ${m.nome} | coord: ${m.coordinate.lat.toFixed(4)},${m.coordinate.lng.toFixed(4)} | rilevanza: ${m.valutazione} | visitabilità: ${m.visitabilita}`
+    )
     .join("\n")
 }
 
@@ -171,10 +168,19 @@ async function streamGemini(apiKey, model, userPrompt, monuments, systemPromptTe
           const json = line.slice(5).trim()
           if (!json || json === "[DONE]") {
             if (readerDone) break
-              continue
+            continue
           }
           try {
             const parsed = JSON.parse(json)
+
+            // debug: segnala finishReason anomali
+            const finishReason = parsed?.candidates?.[0]?.finishReason
+            if (finishReason && finishReason !== "STOP") {
+              await writer.write(
+                encoder.encode(`data: ${JSON.stringify({ error: `stop: ${finishReason}` })}\n\n`)
+              )
+            }
+
             const parts = parsed?.candidates?.[0]?.content?.parts || []
             const text = parts.map((p) => p.text || "").join("")
             if (text) {
